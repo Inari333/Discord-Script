@@ -1,3 +1,13 @@
+// ==UserScript==
+// @name        Script discord.com
+// @namespace   Discord Extension
+// @match       https://discord.com/*
+// @grant       none
+// @version     0.2
+// @author      Inari_chan
+// @description
+// ==/UserScript==
+
 //Config, you can change the value below.
 var _enableHideBlockedChat = true;
 var _enableHideBlockedVocal = false; //Only hide Ethilyk for now, planning to use ignore list later.
@@ -19,14 +29,14 @@ var _activeProfile = null;
 start();
 
 function start() {
-        _savedContents = {};
-        _currentPath = window.location.pathname;
-        _savedContents[_currentPath] = {};
-        _nicknames = {};
-        _activeProfile = null;
-        addCSS();
-        startObserver();
-        observe();
+    _savedContents = {};
+    _currentPath = window.location.pathname;
+    _savedContents[_currentPath] = {};
+    _nicknames = {};
+    _activeProfile = null;
+    addCSS();
+    startObserver();
+    observe();
 }
 
 function observe() {
@@ -120,6 +130,8 @@ function saveElement(content) {
     if (content.closest("li") == null) {
         console.log("Cant save element");
         console.log(content);
+        _savedContents[_currentPath][content.id].element = null;
+        return;
     }
 
     _savedContents[_currentPath][content.id].element = content.closest("li").cloneNode(true);
@@ -138,6 +150,11 @@ function displayDeletedContent() {
         return;
 
     Object.keys(_savedContents[_currentPath]).forEach((key) => {
+        if (_savedContents[_currentPath][key].element == null || _savedContents[_currentPath][key].element == undefined) {
+            console.log("Can't display deleted content of element null");
+            return;
+        }
+
         if (_savedContents[_currentPath][key].isDeleted
             && document.getElementById(_savedContents[_currentPath][key].element.id) == null
             && !isSelf(_savedContents[_currentPath][key].element)
