@@ -3,7 +3,7 @@
 // @namespace   Discord Extension
 // @match       https://discord.com/*
 // @grant       none
-// @version     0.2
+// @version     0.4
 // @author      Inari_chan
 // @description
 // ==/UserScript==
@@ -37,6 +37,27 @@ function start() {
     addCSS();
     startObserver();
     observe();
+}
+
+module.exports = class InariScript {
+    start() {
+        _savedContents = {};
+        _currentPath = window.location.pathname;
+        _savedContents[_currentPath] = {};
+        _nicknames = {};
+        _activeProfile = null;
+        _nicknames["1101908475925233826"] = "Not a real Panda";
+        _nicknames["101081695477858304"] = "Faux Asiatique";
+        _nicknames["825476417747419136"] = "Grosse Femme Aigrie";
+        addCSS();
+        startObserver();
+        observe();
+    }
+
+    stop() {
+        removeCSS();
+        _observer.disconnect();
+    }
 }
 
 function observe() {
@@ -128,7 +149,7 @@ function displaySavedContent(content) {
 
 function saveElement(content) {
     if (content.closest("li") == null) {
-        console.log("Cant save element");
+        console.log("Inari Script - Cant save element");
         console.log(content);
         _savedContents[_currentPath][content.id].element = null;
         return;
@@ -138,6 +159,26 @@ function saveElement(content) {
     _savedContents[_currentPath][content.id].element.id = "deleted-" + _savedContents[_currentPath][content.id].element.id;
     _savedContents[_currentPath][content.id].element.querySelectorAll('[id^="message-content"]').forEach((element) => {
         element.classList.add("isDeleted");
+    });
+
+    convertImg(_savedContents[_currentPath][content.id].element);
+}
+
+function convertImg(element) {
+    if (element == null || element == undefined) {
+        console.log("Inari Script - Can't convert image of element null");
+        return;
+    }
+
+    var imgs = element.querySelectorAll('a[class*="originalLink"]');
+
+    imgs.forEach((img) => {
+        if (!img.getAttribute("data-safe-src").includes(".mp4")) {
+            var convertedImg = document.createElement("img");
+            convertedImg.className = "convertedImage";
+            convertedImg.src = img.href;
+            img.replaceWith(convertedImg);
+        }
     });
 }
 
@@ -151,7 +192,7 @@ function displayDeletedContent() {
 
     Object.keys(_savedContents[_currentPath]).forEach((key) => {
         if (_savedContents[_currentPath][key].element == null || _savedContents[_currentPath][key].element == undefined) {
-            console.log("Can't display deleted content of element null");
+            console.log("Inari Script - Can't display deleted content of element null");
             return;
         }
 
@@ -172,12 +213,18 @@ function displayDeletedContent() {
 
 //Out of time content are not considered deleted.
 function isWithinTimeFrame(element) {
+    if (element == null || element == undefined)
+        return false;
+
     var dateStart = new Date(document.querySelector('ol[class*="scrollerInner"] li:not([id^="deleted-"]) time').getAttribute("datetime"));
 
     return getElementDate(element) >= dateStart;
 }
 
 function getElementAfterByDate(element) {
+    if (element == null || element == undefined)
+        return null;
+
     var toReturn = null;
 
     var timeElements = document.querySelectorAll('ol[class*="scrollerInner"] li:not([id^="deleted-"]) time');
@@ -187,7 +234,7 @@ function getElementAfterByDate(element) {
     });
 
     if (toReturn == null)
-        console.log("No element after date found.");
+        console.log("Inari Script - No element after date found.");
 
     return toReturn;
 }
@@ -269,7 +316,7 @@ function updatePath() {
 
 function getContents() {
     //Uploader is a temporally div when a message upload a picture
-    return document.querySelectorAll('[id^="message-content"]:not([id^="message-content-Uploader"]):not([class*="repliedTextContent"]):not([class*="isDeleted"])');
+    return document.querySelectorAll('[id^="message-content"]:not([id^="message-content-Uploader"]):not([class*="repliedTextContent"]):not(.isDeleted)');
 }
 
 function hideBlockedVocal() {
@@ -294,6 +341,15 @@ function addCSS() {
     if (_enableHideBlockedVocal) {
         _style.textContent += '[class*="focusLock"][aria-labelledby^=":"] { display: none; } '; //Hide Voice Call Popup
         _style.textContent += '[aria-label="Ethilyk"] { display: none; } '; //User to hide
+    }
+
+    if (_enableSaveEditedContent) {
+        _style.textContent += `
+        img.convertedImage {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        } `
     }
 
     if (_enableSaveEditedContent && _includeDeletedContent)
